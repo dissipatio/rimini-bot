@@ -91,7 +91,15 @@ async def send_step(chat_id, step_id, context):
             print(f"DEBUG: file error: {e}")
 
     # Send text with reply markup
-    await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode="HTML")
+    effect_id = fields.get("effect_id") or None
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=reply_markup,
+        parse_mode="HTML",
+        message_effect_id=effect_id
+)
     
     # Auto-advance after delay for info_auto nodes
     if step_category == "info_auto" and next_step:
