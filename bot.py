@@ -1,136 +1,68 @@
 import logging
-import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandler, filters, ContextTypes
-from airtable_helper import get_session, upsert_session, get_step
+from airtable_helper import get_session, upsert_session, get_step, get_lang_fields
 import config
-import asyncio
 
 logging.basicConfig(level=logging.INFO)
 
 
-def get_yandex_direct_url(public_url):
-    """Convert Yandex Disk sharing link to direct download URL"""
-    api_url = f'https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key={public_url}'
-    r = requests.get(api_url)
-    data = r.json()
-    return data.get("href")
-
-
-async def send_step(chat_id, step_id, context):
-    step = get_step(step_id)
+async def send_step(chat_id, step_id, context, language="rus"):
+    step = get_step(step_id, language)
     if not step:
         await context.bot.send_message(chat_id=chat_id, text="Step not found.")
         return
+
+    lf = get_lang_fields(language)
     fields = step["fields"]
-    text = fields.get("TXT_rus", "...")
-    step_category = fields.get("step_category", "")
-    button_options = fields.get("button_options", "")
-    next_step = fields.get("next_step_rus", "")
-    images_linked = fields.get("images_linked", "")
-    files_linked = fields.get("files_linked", "")
+    text = fields.get(lf["txt"], "...")
+    button_options = fields.get(lf["buttons"], "")
 
-    print(f"DEBUG send_step: id={step_id} category={step_category} buttons={button_options} next={next_step}")
-
-    # Build reply markup based on step type
-    reply_markup = None
-
-    if step_category == "question" and button_options and "_r" in button_options:
-    # Multiple choice question — build one button per option
+    if button_options:
         button_ids = [b.strip() for b in button_options.split(",")]
         keyboard = []
         for btn_id in button_ids:
-            btn_step = get_step(btn_id)
+            btn_step = get_step(btn_id, language)
             if btn_step:
-                btn_text = btn_step["fields"].get("TXT_rus", btn_id)
-                keyboard.append([InlineKeyboardButton(btn_text, callback_data=btn_id)])
-        if keyboard:
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
-    elif step_category in ("info", "error", "help"):
-        if button_options and "_r" in button_options:
-            # Multiple buttons listed in button_options
-            button_ids = [b.strip() for b in button_options.split(",")]
-            keyboard = []
-            for btn_id in button_ids:
-                btn_step = get_step(btn_id)
-                if btn_step:
-                    btn_text = btn_step["fields"].get("TXT_rus", "Далее ➡️")
-                    keyboard.append([InlineKeyboardButton(btn_text, callback_data=btn_id)])
-            if keyboard:
-                reply_markup = InlineKeyboardMarkup(keyboard)
-        else:
-        # Single next button from next_step_rus
-            advance_to = next_step.strip() if next_step else ""
-            if advance_to:
-                next_step_data = get_step(advance_to)
-                if next_step_data:
-                    btn_text = next_step_data["fields"].get("TXT_rus", "Далее ➡️")
-                    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(btn_text, callback_data=advance_to)]])
-
-    elif step_category == "info_auto":
-    # No button — just send the message, then auto-advance after 5 seconds
-        pass  # reply_markup stays None
-
-    # Send image if present
-    if images_linked:
-        try:
-            direct_url = get_yandex_direct_url(images_linked)
-            if direct_url:
-                await context.bot.send_photo(chat_id=chat_id, photo=direct_url)
-        except Exception as e:
-            print(f"DEBUG: image error: {e}")
-
-    # Send file if present
-    if files_linked:
-        try:
-            direct_url = get_yandex_direct_url(files_linked)
-            if direct_url:
-                await context.bot.send_document(chat_id=chat_id, document=direct_url)
-        except Exception as e:
-            print(f"DEBUG: file error: {e}")
-
-    # Send text with reply markup
-    effect_id = fields.get("effect_id") or None
-
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=text,
-        reply_markup=reply_markup,
-        parse_mode="HTML",
-        message_effect_id=effect_id
-)
-    
-    # Auto-advance after delay for info_auto nodes
-    if step_category == "info_auto" and next_step:
-        await asyncio.sleep(5)
-        upsert_session(chat_id, next_step)
-        await send_step(chat_id, next_step, context)
+                btn_text = btn_step["fields"].get(lf["txt"], btn_id)
+                # Pass language in callback_data so we know it on button press
+                keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"{language}|{btn_id}")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode="HTML")
+    else:
+        await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML")
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("DEBUG: handle_message called!")
     chat_id = update.message.chat.id
     user_input = update.message.text.strip()
-    print(f"DEBUG: chat_id={chat_id} input={user_input}")
 
+    # /start — show language selection
     if user_input == "/start":
-        upsert_session(chat_id, "1_1_r")
-        await send_step(chat_id, "1_1_r", context)
+        keyboard = [
+            [InlineKeyboardButton("🇷🇺 Русский",  callback_data="lang|rus")],
+            [InlineKeyboardButton("🇬🇧 English",  callback_data="lang|eng")],
+            [InlineKeyboardButton("🇮🇹 Italiano", callback_data="lang|ita")],
+        ]
+        await update.message.reply_text(
+            "🌍 Choose your language / Выберите язык / Scegli la lingua",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
         return
 
+    # Get session
     session = get_session(chat_id)
     if not session:
-        await context.bot.send_message(chat_id=chat_id, text="Please send /start to begin.")
+        await context.bot.send_message(chat_id=chat_id, text="Send /start to begin.")
         return
 
+    language = session["fields"].get(config.FIELD_LANGUAGE, "rus")
+    lf = get_lang_fields(language)
     record_id = session["id"]
     current_step_id = session["fields"].get(config.FIELD_CURRENT_STEP)
-    print(f"DEBUG: current_step={current_step_id}")
+    current_step = get_step(current_step_id, language)
 
-    current_step = get_step(current_step_id)
     if not current_step:
-        print("DEBUG: step not found!")
         return
 
     fields = current_step["fields"]
@@ -138,61 +70,63 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     correct_answers = fields.get("correct_answers", "")
     correct_next = fields.get("correct_next_step", "")
     wrong_next = fields.get("wrong_next_step", "")
-    button_options = fields.get("button_options", "")
 
-    print(f"DEBUG: category={step_category} correct_answers={correct_answers} correct_next={correct_next} wrong_next={wrong_next}")
-
-    if step_category in ("question", "start") and not button_options:
+    if step_category == "question" and not fields.get(lf["buttons"]):
         if user_input.lower() in [a.strip().lower() for a in correct_answers.split(",")]:
-            print("DEBUG: correct answer!")
             upsert_session(chat_id, correct_next, record_id)
-            await send_step(chat_id, correct_next, context)
+            await send_step(chat_id, correct_next, context, language)
         else:
-            print("DEBUG: wrong answer!")
             if wrong_next:
-                await send_step(chat_id, wrong_next, context)
-    elif step_category in ("info", "info_auto", "answer", "help", "error"):
-        next_step = fields.get("next_step_rus", "")
-        print(f"DEBUG: auto-advancing to next_step={next_step}")
-        if next_step:
-            upsert_session(chat_id, next_step, record_id)
-            await send_step(chat_id, next_step, context)
+                await send_step(chat_id, wrong_next, context, language)
     else:
-        next_step = fields.get("next_step_rus", "")
-        print(f"DEBUG: next_step={next_step}")
+        next_step = fields.get(lf["next"], "")
         if next_step:
             upsert_session(chat_id, next_step, record_id)
-            await send_step(chat_id, next_step, context)
+            await send_step(chat_id, next_step, context, language)
 
 
 async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("DEBUG: handle_button called!")
     query = update.callback_query
     await query.answer()
     chat_id = query.message.chat.id
-    button_step_id = query.data
-    print(f"DEBUG: button pressed: {button_step_id}")
+    data = query.data
 
-    button_step = get_step(button_step_id)
+    # Language selection button
+    if data.startswith("lang|"):
+        language = data.split("|")[1]
+        first_step = config.FIRST_STEP.get(language, "1_1_r")
+        session = get_session(chat_id)
+        record_id = session["id"] if session else None
+        upsert_session(chat_id, first_step, record_id, language=language)
+        await send_step(chat_id, first_step, context, language)
+        return
+
+    # Regular button press — format is "language|step_id"
+    if "|" in data:
+        language, button_step_id = data.split("|", 1)
+    else:
+        # Fallback for old-format buttons without language prefix
+        session = get_session(chat_id)
+        language = session["fields"].get(config.FIELD_LANGUAGE, "rus") if session else "rus"
+        button_step_id = data
+
+    lf = get_lang_fields(language)
+    button_step = get_step(button_step_id, language)
     if not button_step:
-        print("DEBUG: button step not found!")
         return
 
     fields = button_step["fields"]
-    step_category = fields.get("step_category", "")
-    next_step = fields.get("next_step_rus", "")
-
-    print(f"DEBUG: button category={step_category} next_step={next_step}")
+    next_step = fields.get(lf["next"], "")
 
     session = get_session(chat_id)
     record_id = session["id"] if session else None
 
     if next_step:
         upsert_session(chat_id, next_step, record_id)
-        await send_step(chat_id, next_step, context)
+        await send_step(chat_id, next_step, context, language)
     else:
         upsert_session(chat_id, button_step_id, record_id)
-        await send_step(chat_id, button_step_id, context)
+        await send_step(chat_id, button_step_id, context, language)
 
 
 app = ApplicationBuilder().token(config.TELEGRAM_TOKEN).build()

@@ -5,44 +5,48 @@ api = Api(config.AIRTABLE_API_KEY)
 sessions_table = api.table(config.AIRTABLE_BASE_ID, config.SESSIONS_TABLE)
 bot_table = api.table(config.AIRTABLE_BASE_ID, config.BOT_TABLE)
 
+# Map language code → Airtable field names
+LANG_FIELDS = {
+    "rus": {
+        "step":    "Step_rus",
+        "txt":     "TXT_rus",
+        "next":    "next_step_rus",
+        "buttons": "button_options",   # adjust if you have button_options_eng etc.
+    },
+    "eng": {
+        "step":    "Step_eng",
+        "txt":     "TXT_eng",
+        "next":    "next_step_eng",
+        "buttons": "button_options",
+    },
+    "ita": {
+        "step":    "Step_ita",
+        "txt":     "TXT_ita",
+        "next":    "next_step_ita",
+        "buttons": "button_options",
+    },
+}
+
+def get_lang_fields(language):
+    return LANG_FIELDS.get(language, LANG_FIELDS["rus"])
 
 def get_session(chat_id):
-    """Find user's current step in Sessions table"""
-    records = sessions_table.all(
-    formula=f'{{{config.FIELD_CHAT_ID}}} = "{chat_id}"'
-)
-    
-    if records:
-        # Delete duplicates, keep only the first
-        if len(records) > 1:
-            for duplicate in records[1:]:
-                sessions_table.delete(duplicate["id"])
-        return records[0]
-    return None
+    records = sessions_table.all(formula=f"{{{config.FIELD_CHAT_ID}}} = '{chat_id}'")
+    return records[0] if records else None
 
-
-def upsert_session(chat_id, new_step, record_id=None):
-    fields = {
-        "chat_id": str(chat_id),
-        "current_step": new_step,
-        "language": "rus"
-    }
+def upsert_session(chat_id, step_id, record_id=None, language=None):
+    data = {config.FIELD_CURRENT_STEP: step_id}
+    if language:
+        data[config.FIELD_LANGUAGE] = language
     if record_id:
-        sessions_table.update(record_id, fields)
+        sessions_table.update(record_id, data)
     else:
-        existing = get_session(chat_id)
-        if existing:
-            sessions_table.update(existing["id"], fields)
-        else:
-            sessions_table.create(fields)
+        data[config.FIELD_CHAT_ID] = str(chat_id)
+        sessions_table.create(data)
 
-
-def get_step(step_id):
-    """Fetch a step row from Bot table"""
-    records = bot_table.all(
-        formula=f'{{Step_rus}} = "{step_id}"',
-        max_records=1
-    )
-    if records:
-        return records[0]
-    return None
+def get_step(step_id, language="rus"):
+    """Look up a step record by its step ID in the correct language field."""
+    fields = get_lang_fields(language)
+    step_field = fields["step"]
+    records = bot_table.all(formula=f"{{{step_field}}} = '{step_id}'")
+    return records[0] if records else None
