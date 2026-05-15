@@ -4,6 +4,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from airtable_helper import get_session, upsert_session, get_step
 import config
+import asyncio
 
 logging.basicConfig(level=logging.INFO)
 
@@ -67,6 +68,10 @@ async def send_step(chat_id, step_id, context):
                     btn_text = next_step_data["fields"].get("TXT_rus", "Далее ➡️")
                     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(btn_text, callback_data=advance_to)]])
 
+    elif step_category == "info_auto":
+    # No button — just send the message, then auto-advance after 5 seconds
+        pass  # reply_markup stays None
+
     # Send image if present
     if images_linked:
         try:
@@ -87,6 +92,12 @@ async def send_step(chat_id, step_id, context):
 
     # Send text with reply markup
     await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode="HTML")
+    
+    # Auto-advance after delay for info_auto nodes
+    if step_category == "info_auto" and next_step:
+        await asyncio.sleep(5)
+        upsert_session(chat_id, next_step)
+        await send_step(chat_id, next_step, context)
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -132,7 +143,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             print("DEBUG: wrong answer!")
             if wrong_next:
                 await send_step(chat_id, wrong_next, context)
-    elif step_category in ("info", "answer", "help", "error"):
+    elif step_category in ("info", "info_auto", "answer", "help", "error"):
         next_step = fields.get("next_step_rus", "")
         print(f"DEBUG: auto-advancing to next_step={next_step}")
         if next_step:
