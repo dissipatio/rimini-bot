@@ -45,12 +45,21 @@ async def send_step(chat_id, step_id, context):
         reply_markup = InlineKeyboardMarkup(keyboard)
 
     elif step_category == "info":
-        advance_to = button_options.strip() if button_options else next_step
-        if advance_to:
-            next_step_data = get_step(advance_to)
+        if button_options and "_r" in button_options:
+            button_ids = [b.strip() for b in button_options.split(",")]
+            keyboard = []
+            for btn_id in button_ids:
+                btn_step = get_step(btn_id)
+                if btn_step:
+                    btn_text = btn_step["fields"].get("TXT_rus", "Далее ➡️")
+                    keyboard.append([InlineKeyboardButton(btn_text, callback_data=btn_id)])
+            if keyboard:
+                reply_markup = InlineKeyboardMarkup(keyboard)
+        elif next_step:
+            next_step_data = get_step(next_step)
             if next_step_data:
                 btn_text = next_step_data["fields"].get("TXT_rus", "Далее ➡️")
-                reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(btn_text, callback_data=advance_to)]])
+                reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(btn_text, callback_data=next_step)]])
 
     # Send image if present
     if images_linked:
