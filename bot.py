@@ -35,6 +35,7 @@ async def send_step(chat_id, step_id, context):
     reply_markup = None
 
     if step_category == "question" and button_options and "_r" in button_options:
+    # Multiple choice question — build one button per option
         button_ids = [b.strip() for b in button_options.split(",")]
         keyboard = []
         for btn_id in button_ids:
@@ -42,10 +43,12 @@ async def send_step(chat_id, step_id, context):
             if btn_step:
                 btn_text = btn_step["fields"].get("TXT_rus", btn_id)
                 keyboard.append([InlineKeyboardButton(btn_text, callback_data=btn_id)])
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        if keyboard:
+            reply_markup = InlineKeyboardMarkup(keyboard)
 
-    elif step_category == "info":
+    elif step_category in ("info", "error", "help"):
         if button_options and "_r" in button_options:
+            # Multiple buttons listed in button_options
             button_ids = [b.strip() for b in button_options.split(",")]
             keyboard = []
             for btn_id in button_ids:
@@ -55,11 +58,14 @@ async def send_step(chat_id, step_id, context):
                     keyboard.append([InlineKeyboardButton(btn_text, callback_data=btn_id)])
             if keyboard:
                 reply_markup = InlineKeyboardMarkup(keyboard)
-        elif next_step:
-            next_step_data = get_step(next_step)
-            if next_step_data:
-                btn_text = next_step_data["fields"].get("TXT_rus", "Далее ➡️")
-                reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(btn_text, callback_data=next_step)]])
+        else:
+        # Single next button from next_step_rus
+            advance_to = next_step.strip() if next_step else ""
+            if advance_to:
+                next_step_data = get_step(advance_to)
+                if next_step_data:
+                    btn_text = next_step_data["fields"].get("TXT_rus", "Далее ➡️")
+                    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(btn_text, callback_data=advance_to)]])
 
     # Send image if present
     if images_linked:
