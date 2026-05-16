@@ -1,4 +1,6 @@
 import logging
+import os
+import time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from airtable_helper import get_session, upsert_session, get_step, get_lang_fields
@@ -25,7 +27,6 @@ async def send_step(chat_id, step_id, context, language="rus"):
             btn_step = get_step(btn_id, language)
             if btn_step:
                 btn_text = btn_step["fields"].get(lf["txt"], btn_id)
-                # Pass language in callback_data so we know it on button press
                 keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"{language}|{btn_id}")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode="HTML")
@@ -37,7 +38,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat.id
     user_input = update.message.text.strip()
 
-    # /start — show language selection
     if user_input == "/start":
         keyboard = [
             [InlineKeyboardButton("🇷🇺 Русский",  callback_data="lang|rus")],
@@ -50,7 +50,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Get session
     session = get_session(chat_id)
     if not session:
         await context.bot.send_message(chat_id=chat_id, text="Send /start to begin.")
@@ -91,21 +90,21 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = query.message.chat.id
     data = query.data
 
-    # Language selection button
+    print(f"DEBUG button: data={data}, chat_id={chat_id}")
+
     if data.startswith("lang|"):
         language = data.split("|")[1]
         first_step = config.FIRST_STEP.get(language, "1_1_r")
+        print(f"DEBUG lang selected: {language}, first_step={first_step}")
         session = get_session(chat_id)
         record_id = session["id"] if session else None
         upsert_session(chat_id, first_step, record_id, language=language)
         await send_step(chat_id, first_step, context, language)
         return
 
-    # Regular button press — format is "language|step_id"
     if "|" in data:
         language, button_step_id = data.split("|", 1)
     else:
-        # Fallback for old-format buttons without language prefix
         session = get_session(chat_id)
         language = session["fields"].get(config.FIELD_LANGUAGE, "rus") if session else "rus"
         button_step_id = data
@@ -128,20 +127,7 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         upsert_session(chat_id, button_step_id, record_id)
         await send_step(chat_id, button_step_id, context, language)
 
-    print(f"DEBUG button: data={data}, chat_id={chat_id}")
 
-    # Language selection button
-    if data.startswith("lang|"):
-        language = data.split("|")[1]
-        first_step = config.FIRST_STEP.get(language, "1_1_r")
-        print(f"DEBUG lang selected: {language}, first_step={first_step}")
-        session = get_session(chat_id)
-        record_id = session["id"] if session else None
-        upsert_session(chat_id, first_step, record_id, language=language)
-        await send_step(chat_id, first_step, context, language)
-        return
-
-import time
 time.sleep(5)
 
 app = ApplicationBuilder().token(config.TELEGRAM_TOKEN).build()
@@ -149,4 +135,16 @@ app.add_handler(MessageHandler(filters.ALL, handle_message))
 app.add_handler(CallbackQueryHandler(handle_button))
 
 print("Bot is running...")
-app.run_polling(drop_pending_updates=True)
+
+PORT = int(os.environ.get("PORT", 8080))
+RAILWAY_URL = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+
+if RAILWAY_URL:
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        webhook_url=f"https://{RAILWAY_URL}/webhook",
+        drop_pending_updates=True,
+    )
+else:
+    app.run_polling(drop_pending_updates=True)
