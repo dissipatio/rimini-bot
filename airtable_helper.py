@@ -1,4 +1,3 @@
-
 from pyairtable import Api
 import config
  
@@ -55,7 +54,10 @@ def upsert_session(chat_id, step_id, record_id=None, language=None):
  
  
 def get_step(step_id, language="rus"):
-    fields = get_lang_fields(language)
-    step_field = fields["step"]
-    records = bot_table.all(formula=f"{{{step_field}}} = '{step_id}'")
+    """
+    Step IDs are language-independent — they're keys, not translated content.
+    Always look them up in Step_rus, regardless of the user's chosen language.
+    The `language` argument is kept for backward compatibility with callers.
+    """
+    records = bot_table.all(formula=f"{{Step_rus}} = '{step_id}'")
     return records[0] if records else None
