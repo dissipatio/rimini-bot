@@ -141,6 +141,8 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_step(chat_id, first_step, context, language)
         return
 
+import time
+time.sleep(5)
 
 app = ApplicationBuilder().token(config.TELEGRAM_TOKEN).build()
 app.add_handler(MessageHandler(filters.ALL, handle_message))
