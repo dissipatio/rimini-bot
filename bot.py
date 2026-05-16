@@ -147,4 +147,4 @@ app.add_handler(MessageHandler(filters.ALL, handle_message))
 app.add_handler(CallbackQueryHandler(handle_button))
 
 print("Bot is running...")
-app.run_polling()
+app.run_polling(drop_pending_updates=True)
