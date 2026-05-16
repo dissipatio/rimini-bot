@@ -147,6 +147,7 @@ if WEBHOOK_URL:
         url_path="webhook",
         webhook_url=WEBHOOK_URL,
         drop_pending_updates=True,
+        allowed_updates=["message", "callback_query"],
     )
 else:
     print("Starting polling...")
