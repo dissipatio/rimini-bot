@@ -128,6 +128,19 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         upsert_session(chat_id, button_step_id, record_id)
         await send_step(chat_id, button_step_id, context, language)
 
+    print(f"DEBUG button: data={data}, chat_id={chat_id}")
+
+    # Language selection button
+    if data.startswith("lang|"):
+        language = data.split("|")[1]
+        first_step = config.FIRST_STEP.get(language, "1_1_r")
+        print(f"DEBUG lang selected: {language}, first_step={first_step}")
+        session = get_session(chat_id)
+        record_id = session["id"] if session else None
+        upsert_session(chat_id, first_step, record_id, language=language)
+        await send_step(chat_id, first_step, context, language)
+        return
+
 
 app = ApplicationBuilder().token(config.TELEGRAM_TOKEN).build()
 app.add_handler(MessageHandler(filters.ALL, handle_message))
