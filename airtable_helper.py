@@ -27,7 +27,32 @@ LANG_FIELDS = {
 }
 
 def get_lang_fields(language):
-    return LANG_FIELDS.get(language, LANG_FIELDS["rus"])
+    """
+    Returns a dict telling the bot which Airtable column to read
+    for each piece of language-specific content.
+    """
+    mapping = {
+        "rus": {
+            "txt":     "text_rus",          # <-- your existing column names
+            "buttons": "buttons_rus",       # <-- (replace with whatever
+            "next":    "next_step_rus",     # <--  you actually have)
+            "answers": "correct_answers",   # <-- NEW: Russian uses base column
+        },
+        "eng": {
+            "txt":     "text_eng",
+            "buttons": "buttons_eng",
+            "next":    "next_step_eng",
+            "answers": "correct_answers_eng",   # <-- NEW
+        },
+        "ita": {
+            "txt":     "text_ita",
+            "buttons": "buttons_ita",
+            "next":    "next_step_ita",
+            "answers": "correct_answers_ita",   # <-- NEW
+        },
+    }
+    return mapping.get(language, mapping["rus"])
+
 
 def get_session(chat_id):
     records = sessions_table.all(formula=f"{{{config.FIELD_CHAT_ID}}} = '{chat_id}'")
