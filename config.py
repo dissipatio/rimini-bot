@@ -8,8 +8,9 @@ BOT_TABLE = os.environ.get("BOT_TABLE", "tblJFjNJfR2Zt1wiT")
 FIELD_CHAT_ID = os.environ.get("FIELD_CHAT_ID", "chat_id")
 FIELD_CURRENT_STEP = os.environ.get("FIELD_CURRENT_STEP", "current_step")
 FIELD_LANGUAGE = os.environ.get("FIELD_LANGUAGE", "language")
+
 FIRST_STEP = {
     "rus": "1_1_r",
-    "eng": "1_1_e",   # change to your actual first eng step ID
-    "ita": "1_1_i",   # change to your actual first ita step ID
+    "eng": "1_1_e",
+    "ita": "1_1_i",
 }

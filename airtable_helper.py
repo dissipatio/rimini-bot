@@ -5,13 +5,12 @@ api = Api(config.AIRTABLE_API_KEY)
 sessions_table = api.table(config.AIRTABLE_BASE_ID, config.SESSIONS_TABLE)
 bot_table = api.table(config.AIRTABLE_BASE_ID, config.BOT_TABLE)
 
-# Map language code → Airtable field names
 LANG_FIELDS = {
     "rus": {
         "step":    "Step_rus",
         "txt":     "TXT_rus",
         "next":    "next_step_rus",
-        "buttons": "button_options",   # adjust if you have button_options_eng etc.
+        "buttons": "button_options",
     },
     "eng": {
         "step":    "Step_eng",
@@ -45,7 +44,6 @@ def upsert_session(chat_id, step_id, record_id=None, language=None):
         sessions_table.create(data)
 
 def get_step(step_id, language="rus"):
-    """Look up a step record by its step ID in the correct language field."""
     fields = get_lang_fields(language)
     step_field = fields["step"]
     records = bot_table.all(formula=f"{{{step_field}}} = '{step_id}'")
