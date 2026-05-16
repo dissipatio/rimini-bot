@@ -38,6 +38,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat.id
     user_input = update.message.text.strip()
 
+    print(f"DEBUG message: chat_id={chat_id}, text={user_input}")
+
     if user_input == "/start":
         keyboard = [
             [InlineKeyboardButton("🇷🇺 Русский",  callback_data="lang|rus")],
@@ -50,38 +52,48 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    session = get_session(chat_id)
-    if not session:
-        await context.bot.send_message(chat_id=chat_id, text="Send /start to begin.")
-        return
+    try:
+        session = get_session(chat_id)
+        if not session:
+            await context.bot.send_message(chat_id=chat_id, text="Send /start to begin.")
+            return
 
-    language = session["fields"].get(config.FIELD_LANGUAGE, "rus")
-    lf = get_lang_fields(language)
-    record_id = session["id"]
-    current_step_id = session["fields"].get(config.FIELD_CURRENT_STEP)
-    current_step = get_step(current_step_id, language)
+        language = session["fields"].get(config.FIELD_LANGUAGE, "rus")
+        lf = get_lang_fields(language)
+        record_id = session["id"]
+        current_step_id = session["fields"].get(config.FIELD_CURRENT_STEP)
+        print(f"DEBUG message: language={language}, current_step={current_step_id}")
 
-    if not current_step:
-        return
+        current_step = get_step(current_step_id, language)
+        if not current_step:
+            print(f"DEBUG: step {current_step_id} not found for language {language}")
+            return
 
-    fields = current_step["fields"]
-    step_category = fields.get("step_category", "")
-    correct_answers = fields.get("correct_answers", "")
-    correct_next = fields.get("correct_next_step", "")
-    wrong_next = fields.get("wrong_next_step", "")
+        fields = current_step["fields"]
+        step_category = fields.get("step_category", "")
+        correct_answers = fields.get("correct_answers", "")
+        correct_next = fields.get("correct_next_step", "")
+        wrong_next = fields.get("wrong_next_step", "")
 
-    if step_category == "question" and not fields.get(lf["buttons"]):
-        if user_input.lower() in [a.strip().lower() for a in correct_answers.split(",")]:
-            upsert_session(chat_id, correct_next, record_id)
-            await send_step(chat_id, correct_next, context, language)
+        print(f"DEBUG message: category={step_category}, correct_answers={correct_answers}")
+
+        if step_category == "question" and not fields.get(lf["buttons"]):
+            if user_input.lower() in [a.strip().lower() for a in correct_answers.split(",")]:
+                upsert_session(chat_id, correct_next, record_id)
+                await send_step(chat_id, correct_next, context, language)
+            else:
+                if wrong_next:
+                    await send_step(chat_id, wrong_next, context, language)
         else:
-            if wrong_next:
-                await send_step(chat_id, wrong_next, context, language)
-    else:
-        next_step = fields.get(lf["next"], "")
-        if next_step:
-            upsert_session(chat_id, next_step, record_id)
-            await send_step(chat_id, next_step, context, language)
+            next_step = fields.get(lf["next"], "")
+            if next_step:
+                upsert_session(chat_id, next_step, record_id)
+                await send_step(chat_id, next_step, context, language)
+
+    except Exception as e:
+        print(f"ERROR in handle_message: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
