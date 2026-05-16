@@ -137,14 +137,16 @@ app.add_handler(CallbackQueryHandler(handle_button))
 print("Bot is running...")
 
 PORT = int(os.environ.get("PORT", 8080))
-RAILWAY_URL = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 
-if RAILWAY_URL:
+if WEBHOOK_URL:
+    print(f"Starting webhook on port {PORT}, url={WEBHOOK_URL}")
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
-        webhook_url=f"https://{RAILWAY_URL}/webhook",
+        webhook_url=WEBHOOK_URL,
         drop_pending_updates=True,
     )
 else:
+    print("Starting polling...")
     app.run_polling(drop_pending_updates=True)
