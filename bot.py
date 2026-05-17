@@ -135,7 +135,7 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
  
     fields = button_step["fields"]
-    next_step = fields.get(lf["next"], "")
+    next_step = fields.get("next_step_rus", "")
  
     session = get_session(chat_id)
     record_id = session["id"] if session else None
