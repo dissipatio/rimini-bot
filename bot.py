@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from airtable_helper import get_session, upsert_session, get_step, get_lang_fields
@@ -14,16 +15,47 @@ logging.basicConfig(level=logging.INFO)
 NAV_NEXT_FIELD = "next_step_rus"
 
 
+def get_yandex_direct_url(public_url):
+    """Convert Yandex Disk sharing link to direct download URL"""
+    api_url = f'https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key={public_url}'
+    r = requests.get(api_url)
+    data = r.json()
+    return data.get("href")
+
+
 async def send_step(chat_id, step_id, context, language="rus"):
     step = get_step(step_id, language)
     if not step:
         await context.bot.send_message(chat_id=chat_id, text="Step not found.")
         return
+
     lf = get_lang_fields(language)
     fields = step["fields"]
     text = fields.get(lf["txt"], "...")
     button_options = fields.get(lf["buttons"], "")
     effect_id = fields.get("effect_id") or None
+    images_linked = fields.get("images_linked", "")
+    files_linked = fields.get("files_linked", "")
+
+    # Send image if present
+    if images_linked:
+        try:
+            direct_url = get_yandex_direct_url(images_linked)
+            if direct_url:
+                await context.bot.send_photo(chat_id=chat_id, photo=direct_url)
+        except Exception as e:
+            print(f"DEBUG: image error: {e}")
+
+    # Send file if present
+    if files_linked:
+        try:
+            direct_url = get_yandex_direct_url(files_linked)
+            if direct_url:
+                await context.bot.send_document(chat_id=chat_id, document=direct_url)
+        except Exception as e:
+            print(f"DEBUG: file error: {e}")
+
+    # Send text with buttons or plain
     if button_options:
         button_ids = [b.strip() for b in button_options.split(",")]
         keyboard = []
