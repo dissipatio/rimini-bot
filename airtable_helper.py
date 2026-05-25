@@ -18,6 +18,8 @@ def get_lang_fields(language):
             "next":    "next_step_rus",
             "buttons": "button_options",
             "answers": "correct_answers",
+            "images":  "images_linked",
+            "files":   "files_linked",
         },
         "eng": {
             "step":    "Step_eng",
@@ -25,6 +27,8 @@ def get_lang_fields(language):
             "next":    "next_step_eng",
             "buttons": "button_options",
             "answers": "correct_answers_eng",
+            "images":  "images_linked",
+            "files":   "files_linked_eng",
         },
         "ita": {
             "step":    "Step_ita",
@@ -32,6 +36,8 @@ def get_lang_fields(language):
             "next":    "next_step_ita",
             "buttons": "button_options",
             "answers": "correct_answers_ita",
+            "images":  "images_linked",
+            "files":   "files_linked_ita",
         },
     }
     return mapping.get(language, mapping["rus"])
