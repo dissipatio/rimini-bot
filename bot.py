@@ -34,8 +34,8 @@ async def send_step(chat_id, step_id, context, language="rus"):
     text = fields.get(lf["txt"], "...")
     button_options = fields.get(lf["buttons"], "")
     effect_id = fields.get("effect_id") or None
-    images_linked = fields.get("images_linked", "")
-    files_linked = fields.get("files_linked", "")
+    images_linked = fields.get(lf.get("images", "images_linked"), "")
+    files_linked = fields.get(lf.get("files", "files_linked"), "")
 
     # Send image if present
     if images_linked:
