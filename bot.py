@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+import asyncio
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandler, filters, ContextTypes
@@ -36,6 +37,8 @@ async def send_step(chat_id, step_id, context, language="rus"):
     effect_id = fields.get("effect_id") or None
     images_linked = fields.get(lf.get("images", "images_linked"), "")
     files_linked = fields.get(lf.get("files", "files_linked"), "")
+    step_category = fields.get("step_category", "")
+    next_step_auto = fields.get(NAV_NEXT_FIELD, "")
 
     # Send image if present
     if images_linked:
@@ -68,6 +71,14 @@ async def send_step(chat_id, step_id, context, language="rus"):
         await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode="HTML", message_effect_id=effect_id)
     else:
         await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML", message_effect_id=effect_id)
+
+    # Auto-advance for info_auto steps — wait 5 seconds then send next step automatically
+    if step_category == "info_auto" and next_step_auto:
+        await asyncio.sleep(5)
+        session = get_session(chat_id)
+        record_id = session["id"] if session else None
+        upsert_session(chat_id, next_step_auto, record_id)
+        await send_step(chat_id, next_step_auto, context, language)
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -129,8 +140,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await send_step(chat_id, wrong_next, context, language)
         else:
             # Universal navigation — same step graph across all languages
+            # info_auto steps ignore user input while auto-chaining is in progress
             next_step = fields.get(NAV_NEXT_FIELD, "")
-            if next_step:
+            if next_step and step_category != "info_auto":
                 upsert_session(chat_id, next_step, record_id)
                 await send_step(chat_id, next_step, context, language)
 
