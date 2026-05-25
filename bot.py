@@ -25,18 +25,13 @@ async def send_step(chat_id, step_id, context, language="rus"):
     text = fields.get(lf["txt"], "...")
     button_options = fields.get(lf["buttons"], "")
 
+    effect_id = fields.get("effect_id") or None
+
     if button_options:
-        button_ids = [b.strip() for b in button_options.split(",")]
-        keyboard = []
-        for btn_id in button_ids:
-            btn_step = get_step(btn_id, language)
-            if btn_step:
-                btn_text = btn_step["fields"].get(lf["txt"], btn_id)
-                keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"{language}|{btn_id}")])
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode="HTML")
+        ...
+        await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode="HTML", message_effect_id=effect_id)
     else:
-        await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML")
+        await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML", message_effect_id=effect_id)
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
