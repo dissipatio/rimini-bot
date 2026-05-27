@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()  # reads your local .env file automatically
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-AIRTABLE_TOKEN = os.environ.get("AIRTABLE_TOKEN")
+AIRTABLE_TOKEN = os.environ.get("AIRTABLE_API_KEY")
 AIRTABLE_BASE_ID = os.environ.get("AIRTABLE_BASE_ID")
 SESSIONS_TABLE = os.environ.get("SESSIONS_TABLE", "tblVuemWbrbhr1nTz")
 BOT_TABLE = os.environ.get("BOT_TABLE", "tblJFjNJfR2Zt1wiT")
