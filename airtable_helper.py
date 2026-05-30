@@ -1,11 +1,11 @@
 from pyairtable import Api
 import config
- 
+
 api = Api(config.AIRTABLE_API_KEY)
 sessions_table = api.table(config.AIRTABLE_BASE_ID, config.SESSIONS_TABLE)
 bot_table = api.table(config.AIRTABLE_BASE_ID, config.BOT_TABLE)
- 
- 
+
+
 def get_lang_fields(language):
     """
     Returns a dict telling the bot which Airtable column to read
@@ -39,15 +39,25 @@ def get_lang_fields(language):
             "images":  "images_linked",
             "files":   "files_linked_ita",
         },
+        "k": {
+            "step":    "Step_ukr",
+            "txt":     "TXT_ukr",
+            "next":    "next_step_ukr",
+            "buttons": "button_options",
+            "answers": "correct_answers_ukr",
+            "images":  "images_linked",
+            "files":   "files_linked_ukr",
+        },
+
     }
     return mapping.get(language, mapping["rus"])
- 
- 
+
+
 def get_session(chat_id):
     records = sessions_table.all(formula=f"{{{config.FIELD_CHAT_ID}}} = '{chat_id}'")
     return records[0] if records else None
- 
- 
+
+
 def upsert_session(chat_id, step_id, record_id=None, language=None):
     data = {config.FIELD_CURRENT_STEP: step_id}
     if language:
@@ -57,8 +67,8 @@ def upsert_session(chat_id, step_id, record_id=None, language=None):
     else:
         data[config.FIELD_CHAT_ID] = str(chat_id)
         sessions_table.create(data)
- 
- 
+
+
 def get_step(step_id, language="rus"):
     """
     Step IDs are language-independent — they're keys, not translated content.
