@@ -89,14 +89,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_input == "/start":
         keyboard = [
-            [InlineKeyboardButton("🇷🇺 Русский",    callback_data="lang|rus")],
-            [InlineKeyboardButton("🇬🇧 English",    callback_data="lang|eng")],
-            [InlineKeyboardButton("🇮🇹 Italiano",   callback_data="lang|ita")],
-            [InlineKeyboardButton("🇺🇦 Українська", callback_data="lang|ukr")],
-            [InlineKeyboardButton("🇩🇪 Deutsch",    callback_data="lang|deu")],
+            [InlineKeyboardButton("<b>RUS</b> Русский",    callback_data="lang|rus")],
+            [InlineKeyboardButton("<b>ENG</b> English",    callback_data="lang|eng")],
+            [InlineKeyboardButton("<b>ITA</b> Italiano",   callback_data="lang|ita")],
+            [InlineKeyboardButton("<b>UKR</b> Українська", callback_data="lang|ukr")],
+            [InlineKeyboardButton("<b>DEU</b> Deutsch",    callback_data="lang|deu")],
+            [InlineKeyboardButton("<b>RUS</b> Русский",    callback_data="lang|rus")],
+            [InlineKeyboardButton("<b>FRA</b> Français",    callback_data="lang|fra")],
+            [InlineKeyboardButton("<b>HUN</b> Magyar",    callback_data="lang|hun")],
 ]
         await update.message.reply_text(
-            "🌍 Choose your language / Выберите язык / Scegli la lingua",
+            "🌍 Choose your language",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return

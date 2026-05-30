@@ -48,6 +48,42 @@ def get_lang_fields(language):
             "images":  "images_linked",
             "files":   "files_linked_ukr",
         },
+        "pol": {
+            "step":    "Step_pol",
+            "txt":     "TXT_pol",
+            "next":    "next_step_pol",
+            "buttons": "button_options",
+            "answers": "correct_answers_pol",
+            "images":  "images_linked",
+            "files":   "files_linked_pol",
+        },
+        "deu": {
+            "step":    "Step_deu",
+            "txt":     "TXT_deu",
+            "next":    "next_step_deu",
+            "buttons": "button_options",
+            "answers": "correct_answers_deu",
+            "images":  "images_linked",
+            "files":   "files_linked_deu",
+        },
+        "fra": {
+            "step":    "Step_fra",
+            "txt":     "TXT_fra",
+            "next":    "next_step_fra",
+            "buttons": "button_options",
+            "answers": "correct_answers_fra",
+            "images":  "images_linked",
+            "files":   "files_linked_fra",
+        },
+        "hun": {
+            "step":    "Step_hun",
+            "txt":     "TXT_hun",
+            "next":    "next_step_hun",
+            "buttons": "button_options",
+            "answers": "correct_answers_hun",
+            "images":  "images_linked",
+            "files":   "files_linked_hun",
+        },
 
     }
     return mapping.get(language, mapping["rus"])
