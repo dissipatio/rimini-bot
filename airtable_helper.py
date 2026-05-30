@@ -39,7 +39,7 @@ def get_lang_fields(language):
             "images":  "images_linked",
             "files":   "files_linked_ita",
         },
-        "k": {
+        "ukr": {
             "step":    "Step_ukr",
             "txt":     "TXT_ukr",
             "next":    "next_step_ukr",
